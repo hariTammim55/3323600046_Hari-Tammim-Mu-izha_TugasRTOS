@@ -8,13 +8,13 @@ Pada percobaan ini digunakan fungsi `xTaskCreatePinnedToCore()` untuk membuat ta
 ### ⚙️ Format Fungsi
 ```cpp
 xTaskCreatePinnedToCore(
-  STEPPER,          // Nama fungsi task
-  "STEPPER",        // Nama task
-  4096,             // Ukuran stack (byte)
-  NULL,             // Parameter task
-  1,                // Prioritas task
-  NULL,             // Handle task
-  0                 // Core yang digunakan (Core 0)
+    taskFunction,     // fungsi task
+    "TaskName",       // nama task
+    stackSize,        // ukuran stack
+    NULL,             // parameter
+    priority,         // prioritas task
+    NULL,             // handle task
+    coreID            // 0 atau 1 untuk menentukan core
 );
 ```
 
