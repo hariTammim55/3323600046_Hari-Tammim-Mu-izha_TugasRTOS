@@ -4,58 +4,60 @@ RTOS pada **ESP32-S3** sudah tersedia secara **bawaan**, sehingga **tidak perlu 
 Pada percobaan ini digunakan fungsi `xTaskCreatePinnedToCore()` untuk membuat task dan menempatkannya pada core tertentu.
 
 ---
-**1. Button**
-Langkah Percobaan:
-- Konfigurasi Pin
-- Setup task baca nilai Button
-- Setup task tampilkan nilai
-- Create task button
-- Run task
 
-**2. Buzzer**
-Langkah Percobaan:
-- Konfigurasi Pin
-- Setup Task Buzzer
-- Create dan run task
+## 🧱 Daftar Percobaan
 
-**3. Encoder**
-Langkah Percobaan:
-- Konfigurasi pin
-- Setup task Encoder
-- Create dan run task
+**1. Button**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task baca nilai Button  
+- Setup task tampilkan nilai  
+- Create task Button  
+- Run task  
 
-**4. led**
-Langkah Percobaan:
-- Konfigurasi pin
-- Setup task Led
-- Create dan run task
+**2. Buzzer**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task Buzzer  
+- Create dan run task  
 
-**5. Oled**
-Langkah Percobaan:
-- Konfigurasi pin
-- Setup task Oled
-- Create dan run task
+**3. Encoder**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task Encoder  
+- Create dan run task  
 
-**6. Potentio**
-Langkah Percobaan:
-- Konfigurasi pin
-- Setup task potentio
-- Create dan run task
+**4. LED**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task LED  
+- Create dan run task  
 
-**7. Servo**
-Langkah Percobaan:
-- Konfigurasi pin
-- Setup task servo
-- Create dan run task
+**5. OLED**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task OLED  
+- Create dan run task  
 
-**8. Stepper**
-Langkah Percobaan:
-- Konfigurasi pin
-- Setup task stepper
-- Create dan run task
+**6. Potensio**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task Potensio  
+- Create dan run task  
 
-```
-```
+**7. Servo**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task Servo  
+- Create dan run task  
+
+**8. Stepper**  
+Langkah Percobaan:  
+- Konfigurasi pin  
+- Setup task Stepper  
+- Create dan run task  
+
+---
 
 ### ⚙️ Format Fungsi
 ```cpp
@@ -74,12 +76,14 @@ xTaskCreatePinnedToCore(
 
 ### 🧠 Contoh Implementasi Fungsi Task
 ```cpp
-void STEPPER(void *pvParameters) {
-  while (1) {
-    stepper.setSpeed(speed);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    stepper.setSpeed(-speed);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+void Led2Task(void *pvParameters) {
+  pinMode(LED_2, OUTPUT);
+  bool state = false;
+
+  for (;;) {
+    state = !state;
+    digitalWrite(LED_2, state);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);  // 300 ms
   }
 }
 ```
