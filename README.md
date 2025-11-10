@@ -1,36 +1,52 @@
-# Langkah Percobaan
+# 🧩 Langkah Percobaan 
 
-RTOS pada ESP32-S3 sudah tersedia secara bawaan, sehingga tidak memerlukan instalasi library tambahan.
+RTOS pada **ESP32-S3** sudah tersedia secara **bawaan**, sehingga **tidak perlu mengunduh atau menginstal library tambahan**.  
+Pada percobaan ini digunakan fungsi `xTaskCreatePinnedToCore()` untuk membuat task dan menempatkannya pada core tertentu.
 
-Program menggunakan fungsi xTaskCreatePinnedToCore() dengan format berikut:
+---
 
+### ⚙️ Format Fungsi
+```cpp
 xTaskCreatePinnedToCore(
   STEPPER,          // Nama fungsi task
-  "STEPPER",        // Nama task (label)
+  "STEPPER",        // Nama task
   4096,             // Ukuran stack (byte)
   NULL,             // Parameter task
   1,                // Prioritas task
   NULL,             // Handle task
   0                 // Core yang digunakan (Core 0)
 );
+```
 
+---
 
-Setelah itu, buat fungsi sesuai dengan nama task yang telah didefinisikan sebelumnya.
-Contoh fungsi task untuk mengatur arah dan kecepatan motor stepper:
-
+### 🧠 Contoh Implementasi Fungsi Task
+```cpp
 void STEPPER(void *pvParameters) {
-  for (;;) {
+  while (1) {
     stepper.setSpeed(speed);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     stepper.setSpeed(-speed);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
+```
 
+---
 
-Syntax berikut digunakan untuk memberikan jeda (delay) di dalam task:
-
+### ⏱️ Penjelasan Fungsi `vTaskDelay()`
+```cpp
 vTaskDelay(1000 / portTICK_PERIOD_MS);
+```
+Fungsi ini digunakan untuk **memberikan jeda (delay)** di dalam task tanpa menghentikan task lain yang berjalan.  
+Nilai delay dihitung dalam **milidetik**, sehingga sistem tetap berjalan secara **multitasking** sesuai prinsip RTOS.
 
+---
 
-Fungsi ini berfungsi untuk menunda eksekusi task selama waktu yang ditentukan (dalam satuan milidetik), tanpa mengganggu task lain yang berjalan secara paralel di sistem RTOS.
+### 📁 File Pendukung
+Gambar, kode lengkap, dan video hasil percobaan dapat dilihat pada **masing-masing folder** yang telah disediakan.
+
+---
+
+🧠 **Catatan:**  
+Struktur RTOS seperti ini memungkinkan **pembagian beban kerja antar core secara paralel**, sehingga setiap peripheral seperti stepper, LED, atau sensor dapat dikontrol secara independen dan efisien.
