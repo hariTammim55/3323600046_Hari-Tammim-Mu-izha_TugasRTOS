@@ -112,5 +112,5 @@ Dengan arsitektur ini, proyek menunjukkan implementasi **multitasking FreeRTOS y
 
 ---
 
-## 📁 Link Simulasi
+## 🔗 Link Simulasi
 https://wokwi.com/projects/447288031064180737
