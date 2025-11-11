@@ -1,103 +1,90 @@
-## RTOS pada ESP32-S3 dengan FreeRTOS (Tanpa Library Tambahan)
+# 🧩 Langkah Percobaan RTOS ESP32-S3 (Multi Task, Multi Core)
 
-ESP32-S3 sudah menggunakan **FreeRTOS bawaan**, sehingga **tidak perlu menginstal library RTOS tambahan**.  
-Setiap fungsi `Task` dijalankan secara paralel menggunakan:
+RTOS pada **ESP32-S3** sudah tersedia secara **bawaan**, sehingga tidak perlu mengunduh atau menginstal library tambahan.  
+Pada proyek ini digunakan **FreeRTOS** dengan fungsi `xTaskCreatePinnedToCore()` untuk:
+- Membuat beberapa task yang berjalan **secara paralel**
+- Mengatur **task tertentu berjalan pada core tertentu**
+- Mengatur **prioritas** tiap task sesuai kebutuhan real-time
+
+Tujuan utamanya adalah memisahkan **task input/monitoring** dan **task output/aktuator** agar sistem lebih stabil, responsif, dan tidak saling mengganggu.
+
+---
+
+## ⚙️ Alasan Pembagian Core
+
+### 🧩 Core 0 → Input & Monitoring (Sensor + OLED + Serial)
+
+Core 0 digunakan untuk task yang:
+- Berhubungan dengan **pembacaan data** (encoder, button, potensio)
+- Menampilkan informasi ke **OLED**
+- Mengirim data monitoring ke **Serial**
+
+Karakteristiknya:
+- Membutuhkan **respons cukup cepat**, terutama untuk encoder
+- Tidak boleh terlalu terganggu oleh proses berat aktuator
+- Tetap aman jika ada sedikit jitter visual (OLED, serial)
+
+### ⚙️ Core 1 → Output Realtime (Stepper, Servo, Buzzer, LED)
+
+Core 1 digunakan untuk task:
+- **Aktuator** yang mengontrol gerakan dan sinyal fisik:
+  - Stepper (pulse berurutan)
+  - Servo
+  - Buzzer
+  - LED
+- Membutuhkan timing yang lebih stabil agar:
+  - Stepper tidak kehilangan langkah
+  - Servo bergerak halus
+  - Buzzer memiliki pola suara konsisten
+
+Dengan memisahkan aktuator di Core 1, gangguan dari pembacaan sensor dan update display di Core 0 dapat diminimalkan.
+
+---
+
+## 🔢 Alasan Penentuan Prioritas Task
+
+Prioritas (`uxPriority`) dipilih berdasarkan **seberapa kritis** dan **seberapa cepat** task harus dieksekusi:
+
+### Core 0 (Sensor & Monitoring)
+- `EncoderTask` → **Priority 5** (paling tinggi di Core 0)  
+  Encoder harus dibaca secepat dan setepat mungkin agar tidak kehilangan perubahan posisi.
+- `ButtonTask` → **Priority 3**  
+  Button perlu responsif, tapi tidak sepenting encoder.
+- `PotentioTask` → **Priority 3**  
+  Pembacaan potensio cukup cepat, tetapi tidak seketat encoder.
+- `OledTask` → **Priority 2**  
+  Update tampilan tidak butuh real-time tinggi, boleh sedikit terlambat.
+- `DisplayTask` → **Priority 1**  
+  Hanya mencetak data ke Serial untuk debug/monitoring, sehingga menjadi prioritas paling rendah.
+
+### Core 1 (Aktuator / Output)
+- `StepperTask` → **Priority 3**  
+  Stepper butuh timing cukup stabil agar gerakan halus dan tidak kehilangan step.
+- `ServoTask` → **Priority 2**  
+  Servo penting, tetapi masih lebih toleran dibanding stepper.
+- `BuzzerTask` → **Priority 2**  
+  Pola buzzer diatur cukup presisi, tapi bukan paling kritis.
+- `LedTask` → **Priority 1**  
+  Hanya indikator visual, sehingga boleh diproses terakhir.
+
+Struktur ini membuat:
+- Task yang **benar-benar kritis timing** (Encoder, Stepper) mendapat prioritas lebih tinggi.
+- Task **informasi & visual** (OLED, Serial, LED) tidak mengganggu proses utama.
+
+---
+
+## 🧠 Contoh Format `xTaskCreatePinnedToCore()`
 
 ```cpp
 xTaskCreatePinnedToCore(
-  TaskFunction_t pvTaskCode,   // Fungsi task
-  const char * const pcName,   // Nama task (untuk debug)
-  const uint32_t usStackDepth, // Ukuran stack
-  void *pvParameters,          // Parameter task (opsional)
-  UBaseType_t uxPriority,      // Prioritas task
-  TaskHandle_t *pvCreatedTask, // Handle task (opsional)
-  const BaseType_t xCoreID     // Core tujuan (0 atau 1)
+  taskFunction,     // fungsi task
+  "TaskName",       // nama task
+  stackSize,        // ukuran stack
+  NULL,             // parameter task
+  priority,         // prioritas task
+  NULL,             // handle task
+  coreID            // 0 atau 1 untuk menentukan core
 );
-Contoh (sesuai program):
+```
 
-cpp
-Salin kode
-xTaskCreatePinnedToCore(EncoderTask,  "EncoderTask",  2048, NULL, 5, NULL, 0);
-xTaskCreatePinnedToCore(ButtonTask,   "ButtonTask",   2048, NULL, 3, NULL, 0);
-xTaskCreatePinnedToCore(PotentioTask, "PotentioTask", 2048, NULL, 3, NULL, 0);
-xTaskCreatePinnedToCore(OledTask,     "OledTask",     4096, NULL, 2, NULL, 0);
-xTaskCreatePinnedToCore(DisplayTask,  "DisplayTask",  2048, NULL, 1, NULL, 0);
-
-xTaskCreatePinnedToCore(StepperTask,  "StepperTask",  4096, NULL, 3, NULL, 1);
-xTaskCreatePinnedToCore(ServoTask,    "ServoTask",    2048, NULL, 2, NULL, 1);
-xTaskCreatePinnedToCore(BuzzerTask,   "BuzzerTask",   2048, NULL, 2, NULL, 1);
-xTaskCreatePinnedToCore(LedTask,      "LedTask",      2048, NULL, 1, NULL, 1);
-Di dalam setiap task digunakan:
-
-cpp
-Salin kode
-vTaskDelay(pdMS_TO_TICKS(x));
-untuk memberikan delay non-blocking dalam satuan milidetik, sehingga task lain tetap bisa dijalankan oleh scheduler FreeRTOS.
-
-Pembagian Core dan Prioritas Task
-Core 0 — Input & Monitoring (Sensor + OLED + Serial)
-Digunakan untuk tugas ringan yang bersifat pembacaan dan tampilan, tidak kritikal timing seketat aktuator.
-
-Task pada Core 0:
-
-EncoderTask — Priority 5
-
-ButtonTask — Priority 3
-
-PotentioTask — Priority 3
-
-OledTask — Priority 2
-
-DisplayTask — Priority 1
-
-Alasan:
-
-Core 0 difokuskan untuk handling input & UI sehingga terpisah dari beban kontrol aktuator di Core 1.
-
-EncoderTask diberi prioritas tertinggi (5) karena perubahan encoder cepat dan sensitif, butuh respon lebih sering agar pembacaan tidak terlewat.
-
-ButtonTask & PotentioTask prioritas 3 karena tetap butuh responsif, tapi tidak sekritis encoder.
-
-OledTask prioritas 2 karena update tampilan periodik; boleh sedikit terlambat tanpa mengganggu sistem.
-
-DisplayTask prioritas 1 karena hanya mencetak ke Serial (logging), paling tidak kritis.
-
-Dengan konfigurasi ini, trafik input dan tampilan tetap halus tanpa mengganggu proses kontrol utama.
-
-Core 1 — Output Realtime (Aktuator & Output Cepat)
-Difokuskan untuk aktuator yang membutuhkan timing lebih stabil dan eksekusi lebih deterministik.
-
-Task pada Core 1:
-
-StepperTask — Priority 3
-
-ServoTask — Priority 2
-
-BuzzerTask — Priority 2
-
-LedTask — Priority 1
-
-Alasan:
-
-Core 1 didedikasikan untuk kontrol aktuator agar tidak terganggu oleh proses OLED/Serial.
-
-StepperTask prioritas 3 karena stepper membutuhkan timing relatif stabil saat generate pulsa langkah.
-
-ServoTask prioritas 2 karena pergerakan servo butuh konsistensi namun tidak seketat stepper.
-
-BuzzerTask prioritas 2 karena pola bunyi menggunakan timing mikrodetik/milidetik; dijaga agar tidak terlalu kalah oleh task lain.
-
-LedTask prioritas 1 karena hanya indikator visual sederhana, tidak membutuhkan real-time tinggi.
-
-Catatan Prioritas (FreeRTOS)
-Angka lebih besar = prioritas lebih tinggi.
-
-Task prioritas lebih tinggi akan lebih sering dieksekusi ketika ready.
-
-Pembagian di atas memastikan:
-
-Input cepat & akurat (encoder, tombol, potensiometer).
-
-Aktuator berjalan stabil (stepper & servo di core terpisah).
-
-Proses non-kritis (Serial, LED, sebagian OLED) tidak mengganggu fungsi utama sistem.
+Struktur ini menunjukkan implementasi **multitasking berbasis RTOS** pada ESP32-S3 dengan pemisahan beban kerja antar core dan prioritas task yang terencana.
